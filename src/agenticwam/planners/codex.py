@@ -8,7 +8,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from vela_agent.core.types import ContractError as ContractViolation
+from agenticwam.core.types import ContractError as ContractViolation
 
 
 class CodexJson:
@@ -16,7 +16,7 @@ class CodexJson:
         self.executable, self.model, self.timeout_sec = executable, model, timeout_sec
 
     def ask(self, prompt, schema, *, images=(), cancel=None):
-        with tempfile.TemporaryDirectory(prefix="vela-codex-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="agenticwam-codex-") as temporary:
             root = Path(temporary)
             schema_path, output = root / "schema.json", root / "answer.json"
             schema_path.write_text(json.dumps(schema), encoding="utf-8")
@@ -43,9 +43,9 @@ class CodexJson:
                 "-c",
                 'model_reasoning_effort="low"',
                 "-c",
-                'model_provider="vela_codex"',
+                'model_provider="agenticwam_codex"',
                 "-c",
-                'model_providers.vela_codex={name="Codex HTTPS", wire_api="responses", '
+                'model_providers.agenticwam_codex={name="Codex HTTPS", wire_api="responses", '
                 "requires_openai_auth=true, supports_websockets=false}",
             ]
             for path in images:

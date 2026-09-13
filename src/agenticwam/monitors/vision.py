@@ -2,8 +2,8 @@
 
 import json
 
-from vela_agent.monitors.verified import validate_verdict
-from vela_agent.planners.language import TEXT, object_schema
+from agenticwam.monitors.verified import validate_verdict
+from agenticwam.planners.language import TEXT, object_schema
 
 VERDICT_SCHEMA = object_schema(
     {

@@ -2,11 +2,11 @@
 
 import json
 
-from vela_agent.backends.replay import PredicateVerifier, ReplayBackend
-from vela_agent.contexts.text import TextCompiler
-from vela_agent.core.runner import Runner
-from vela_agent.core.types import Plan, Step
-from vela_agent.monitors.verified import VerifiedMonitor
+from agenticwam.backends.replay import PredicateVerifier, ReplayBackend
+from agenticwam.contexts.text import TextCompiler
+from agenticwam.core.runner import Runner
+from agenticwam.core.types import Plan, Step
+from agenticwam.monitors.verified import VerifiedMonitor
 
 
 def make_demo(scenario="mixed"):

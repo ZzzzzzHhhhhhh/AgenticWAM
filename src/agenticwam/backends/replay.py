@@ -3,7 +3,7 @@
 import json
 from copy import deepcopy
 
-from vela_agent.core.types import ContractError
+from agenticwam.core.types import ContractError
 
 
 class ReplayBackend:

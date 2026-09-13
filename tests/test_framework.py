@@ -7,15 +7,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from vela_agent.backends.replay import PredicateVerifier, ReplayBackend
-from vela_agent.contexts.text import TextCompiler
-from vela_agent.core.runner import Runner
-from vela_agent.core.types import Context, ContractError, MediaRef, Plan, Request, RunSettings, Step
-from vela_agent.evaluation import summarize
-from vela_agent.examples.demo import make_demo, run_demo
-from vela_agent.monitors.verified import RequiredSignal, VerifiedMonitor
-from vela_agent.monitors.vision import VisionVerifier
-from vela_agent.planners.language import LanguagePlanner
+from agenticwam.backends.replay import PredicateVerifier, ReplayBackend
+from agenticwam.contexts.text import TextCompiler
+from agenticwam.core.runner import Runner
+from agenticwam.core.types import Context, ContractError, MediaRef, Plan, Request, RunSettings, Step
+from agenticwam.evaluation import summarize
+from agenticwam.examples.demo import make_demo, run_demo
+from agenticwam.monitors.verified import RequiredSignal, VerifiedMonitor
+from agenticwam.monitors.vision import VisionVerifier
+from agenticwam.planners.language import LanguagePlanner
 
 
 def assemble(tmp_path, plan=None, records=None, *, monitor=None, settings=None, replanner=None):
@@ -210,7 +210,7 @@ def test_media_ref_is_not_silently_discarded():
 
 
 def test_core_has_no_concrete_dependencies():
-    core = Path(__file__).resolve().parents[1] / "src/vela_agent/core"
+    core = Path(__file__).resolve().parents[1] / "src/agenticwam/core"
     for source in core.glob("*.py"):
         for node in ast.walk(ast.parse(source.read_text())):
             names = (
@@ -220,13 +220,13 @@ def test_core_has_no_concrete_dependencies():
             )
             for name in names:
                 assert not name.startswith(("velabot", "torch", "cv2", "numpy"))
-                if name.startswith("vela_agent"):
-                    assert name.startswith("vela_agent.core")
+                if name.startswith("agenticwam"):
+                    assert name.startswith("agenticwam.core")
     assert "gripper_release" not in (core / "runner.py").read_text()
 
 
 def test_importable_package_never_imports_robot_workspace():
-    source = Path(__file__).resolve().parents[1] / "src/vela_agent"
+    source = Path(__file__).resolve().parents[1] / "src/agenticwam"
     for file in source.rglob("*.py"):
         for node in ast.walk(ast.parse(file.read_text())):
             if isinstance(node, ast.ImportFrom):

@@ -2,7 +2,7 @@
 
 import hashlib
 
-from vela_agent.core.types import Context, ContractError
+from agenticwam.core.types import Context, ContractError
 
 
 class WamContext(Context):

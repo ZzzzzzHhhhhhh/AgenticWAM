@@ -5,7 +5,7 @@ import json
 import threading
 import uuid
 
-from vela_agent.core.types import NeedsClarification, Plan, Request
+from agenticwam.core.types import NeedsClarification, Plan, Request
 
 
 class ContextJobs:
@@ -86,13 +86,13 @@ def build_server(planner, jobs, profile):
     try:
         from mcp.server.fastmcp import FastMCP
     except ImportError as exc:
-        raise RuntimeError("Install velabot-agent[mcp] to use the MCP interface") from exc
+        raise RuntimeError("Install AgenticWAM with MCP support: python -m pip install '.[mcp]'") from exc
     server = FastMCP("AgenticWAM")
 
     @server.tool()
     def agent_capabilities() -> dict:
         """Read task capabilities and limits without connecting to the robot."""
-        return {"schema": "vela.agent.capabilities/v1", "profile": profile}
+        return {"schema": "agenticwam.capabilities/v1", "profile": profile}
 
     @server.tool()
     async def agent_plan(instruction: str) -> dict:

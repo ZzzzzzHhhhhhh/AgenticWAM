@@ -4,7 +4,7 @@ import json
 import uuid
 from dataclasses import asdict
 
-from vela_agent.core.types import ContractError, NeedsClarification, Plan, Step
+from agenticwam.core.types import ContractError, NeedsClarification, Plan, Step
 
 
 def object_schema(properties):

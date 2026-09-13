@@ -1,6 +1,6 @@
 # 接口与插件开发
 
-所有扩展协议在 `vela_agent.core.interfaces`，契约在 `vela_agent.core.types`。core 不导入具体实现。应用在 `config.assemble` 或自己的组合入口中注入实现。
+所有扩展协议在 `agenticwam.core.interfaces`，契约在 `agenticwam.core.types`。core 不导入具体实现。应用在 `config.assemble` 或自己的组合入口中注入实现。
 
 ## 任务与上下文
 
@@ -8,7 +8,7 @@
 `Step` 包含 instruction、success_criteria、preconditions、constraints、skill、时限。当前只执行顺序计划，不隐式调度并行依赖图。
 `ContextCompiler.compile(step, context_id, revision)` 返回动作模型的输入。默认文本编译器只接受声明的 skill；OpenWAM 线协议由后端转换，不能让 core 使用 `wam.context/v1`。
 
-`Plan.to_dict/from_dict` 使用 `vela.agent.plan/v1`。步骤标识校验防止逃逸日志目录；计划最多 64 步，单步最多 600 秒。
+`Plan.to_dict/from_dict` 使用 `agenticwam.plan/v1`。步骤标识校验防止逃逸日志目录；计划最多 64 步，单步最多 600 秒。
 语义正确性仍需模型能力验证，类型校验不证明语言目标可执行。
 
 ## Backend
@@ -43,7 +43,7 @@
 外部包通过 Python entry point 注册，名字由可信配置选择，不允许语言模型输出模块路径并执行。
 
 ```toml
-[project.entry-points."vela_agent.backends"]
+[project.entry-points."agenticwam.backends"]
 my_policy = "my_adapter:create_backend"
 ```
 
@@ -52,7 +52,7 @@ def create_backend(*, config):
     return MyBackend(config)
 ```
 
-配置 `backend: my_policy` 和 `backend_config` 后，CLI 与 MCP 均使用该实现。另有 `vela_agent.planners`、`vela_agent.compilers`、`vela_agent.monitors` 分组。
+配置 `backend: my_policy` 和 `backend_config` 后，CLI 与 MCP 均使用该实现。另有 `agenticwam.planners`、`agenticwam.compilers`、`agenticwam.monitors` 分组。
 工厂参数分别为 planner/monitor 的 `model, profile`，compiler 的 `config`。构造函数应延迟连接硬件至实际执行；列出插件不导入其代码。
 
 新增模型供应商也可直接实现 StructuredModel.ask，注入 LanguagePlanner 与 VisionVerifier，无需修改 Codex 适配器或 Runner。插件代码拥有普通 Python 代码权限，应由部署者安装。

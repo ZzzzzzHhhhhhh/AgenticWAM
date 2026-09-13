@@ -7,12 +7,12 @@ import sys
 import uuid
 from pathlib import Path
 
-from vela_agent.config import assemble, load_profile, make_planner
-from vela_agent.core.types import Plan, Request
+from agenticwam.config import assemble, load_profile, make_planner
+from agenticwam.core.types import Plan, Request
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="AgenticWAM: 任务无关的动作模型编排框架")
+    parser = argparse.ArgumentParser(prog="agenticwam", description="AgenticWAM: 任务无关的动作模型编排框架")
     commands = parser.add_subparsers(dest="command", required=True)
     demo = commands.add_parser("demo", help="离线运行固定证据示例, 不使用模型或机器人")
     demo.add_argument("--scenario", choices=("mixed", "plates"), default="mixed")
@@ -34,25 +34,25 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "demo":
-            from vela_agent.examples.demo import run_demo
+            from agenticwam.examples.demo import run_demo
 
             result = run_demo(args.output, args.scenario)
         elif args.command == "inspect":
-            from vela_agent.evaluation import summarize
+            from agenticwam.evaluation import summarize
 
             result = summarize(args.directory)
         elif args.command == "plugins":
-            from vela_agent.plugins import KINDS, discover
+            from agenticwam.plugins import KINDS, discover
 
             result = {kind: sorted(discover(kind)) for kind in sorted(KINDS)}
         else:
-            from vela_agent.planners.codex import CodexJson
+            from agenticwam.planners.codex import CodexJson
 
             profile = load_profile(args.profile)
             model = CodexJson(executable=args.codex, model=args.model)
             planner = make_planner(profile, model)
             if args.command == "mcp":
-                from vela_agent.service import serve
+                from agenticwam.service import serve
 
                 return serve(planner, lambda: assemble(profile, model, args.output, endpoint=args.endpoint), profile)
             if args.command == "run" and args.plan:
@@ -84,7 +84,7 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1 if result.get("status") in {"failed", "cancelled"} else 0
     except Exception as exc:
-        print(f"Agent: {exc}", file=sys.stderr)
+        print(f"AgenticWAM: {exc}", file=sys.stderr)
         return 1
 
 

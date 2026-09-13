@@ -2,8 +2,8 @@
 
 import json
 
-from vela_agent.backends.vela_signals import completion_settings
-from vela_agent.core.types import ContractError, RunSettings, integer
+from agenticwam.backends.vela_signals import completion_settings
+from agenticwam.core.types import ContractError, RunSettings, integer
 
 
 def load_profile(path):
@@ -43,8 +43,8 @@ def run_settings(profile):
 
 
 def make_planner(profile, model):
-    from vela_agent import plugins
-    from vela_agent.planners.language import LanguagePlanner
+    from agenticwam import plugins
+    from agenticwam.planners.language import LanguagePlanner
 
     if profile.get("planner"):
         return plugins.load("planners", profile["planner"], model=model, profile=profile)
@@ -52,12 +52,12 @@ def make_planner(profile, model):
 
 
 def assemble(profile, model, output, *, endpoint=None, on_event=None):
-    from vela_agent import plugins
-    from vela_agent.backends.vela import VelaContextBackend
-    from vela_agent.contexts.text import TextCompiler
-    from vela_agent.core.runner import Runner
-    from vela_agent.monitors.verified import RequiredSignal, VerifiedMonitor
-    from vela_agent.monitors.vision import VisionVerifier
+    from agenticwam import plugins
+    from agenticwam.backends.vela import VelaContextBackend
+    from agenticwam.contexts.text import TextCompiler
+    from agenticwam.core.runner import Runner
+    from agenticwam.monitors.verified import RequiredSignal, VerifiedMonitor
+    from agenticwam.monitors.vision import VisionVerifier
 
     backend_name = profile.get("backend", "vela-openwam")
     if backend_name == "vela-openwam":

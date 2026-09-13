@@ -2,23 +2,28 @@
 
 面向动作模型的任务编排框架：理解人的目标，生成模型可执行的短条件，依据执行证据决定继续、切换或调整剩余计划。
 
-**状态：0.2.0 工程预览。** 核心与任务、机器人、模型供应商分离；当前提供 Codex、Vela/OpenWAM 和离线证据回放适配。尚未通过真机泛化实验，也不宣称已形成新的研究方法。
+**状态：0.3.0 工程预览。** 核心与任务、机器人、模型供应商分离；当前提供 Codex、Vela/OpenWAM 和离线证据回放适配。尚未通过真机泛化实验，也不宣称已形成新的研究方法。
 
 ## 五分钟离线体验
 
-Python 3.10 及以上。在这个目录中安装，不需要父仓库、GPU、机器人、模型账号或运行时第三方依赖：
+Python 3.10 及以上。从源码安装，不需要父仓库、GPU、机器人、模型账号或运行时第三方依赖：
 
 ```bash
+git clone https://github.com/ZzzzzzHhhhhhh/AgenticWAM.git
+cd AgenticWAM
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install .
-vela-agent-kit demo --scenario mixed --output agent-runs
-vela-agent-kit demo --scenario plates --output agent-runs
+agenticwam demo --scenario mixed --output agent-runs
+agenticwam demo --scenario plates --output agent-runs
 ```
+
+安装包名、命令和 Python 导入名统一为 `agenticwam`，例如 `from agenticwam.core import types`。
+当前通过本仓库源码安装，尚未发布到 PyPI。已有安装请先阅读[迁移说明](docs/migration.md)。
 
 `mixed` 依次演示放杯子、推方块、按按钮；`plates` 演示逐个摆盘。两者共用 Runner、文本编译器和条件检查器，只改变计划与证据数据。
 
-示例使用预设事实回放，**不是物理仿真或机器人成功率测试**。它验证执行顺序、协议和模块替换。输出目录包含 `plan.json`、`events.jsonl` 和 `result.json`。将返回的目录传给 `vela-agent-kit inspect` 可生成运行统计。
+示例使用预设事实回放，**不是物理仿真或机器人成功率测试**。它验证执行顺序、协议和模块替换。输出目录包含 `plan.json`、`events.jsonl` 和 `result.json`。将返回的目录传给 `agenticwam inspect` 可生成运行统计。
 
 ## 架构
 
@@ -55,12 +60,12 @@ OpenWAM 的上下文回执格式和 Vela 的夹爪信号配置只存在于适配
 Codex 适配器使用已安装、已登录的官方 CLI，保留当前实验采用的 `gpt-6-astra` 默认模型；可通过 `--model` 和 `--codex` 指定。它运行隔离的结构化推理调用，不执行模型生成的机器人控制代码。当前 Codex 子进程管理适配支持 Linux/macOS；核心和离线示例不依赖该适配。
 
 ```bash
-vela-agent-kit plan --profile src/vela_agent/examples/plates-openwam.json \
+agenticwam plan --profile src/agenticwam/examples/plates-openwam.json \
   --instruction '把盘子按照红黄蓝绿依次放进去' --output plans
 
 # 执行命令会请求真实机器人运动；endpoint 使用部署控制台实际地址。
-vela-agent-kit run --profile src/vela_agent/examples/plates-openwam.json \
-  --endpoint "$VELABOT_CONSOLE_URL" --plan plans/PLAN_ID.json
+agenticwam run --profile src/agenticwam/examples/plates-openwam.json \
+  --endpoint "$AGENTICWAM_CONSOLE_URL" --plan plans/PLAN_ID.json
 ```
 
 此配置保持从里到外放置的模型能力边界。指定任意编号槽位、其他动作或未训练的能力需要相应模型支持。单步提示词是否落在训练分布内仍需实际验证。
@@ -71,13 +76,13 @@ vela-agent-kit run --profile src/vela_agent/examples/plates-openwam.json \
 
 ```bash
 python -m pip install '.[mcp]'
-vela-agent-kit mcp --profile src/vela_agent/examples/plates-openwam.json \
-  --endpoint "$VELABOT_CONSOLE_URL"
+agenticwam mcp --profile src/agenticwam/examples/plates-openwam.json \
+  --endpoint "$AGENTICWAM_CONSOLE_URL"
 ```
 
 MCP 工具：`agent_capabilities`、`agent_plan`、`agent_execute`、`agent_status`、`agent_events`、`agent_cancel`。规划与查询不产生机器人运动。执行返回任务状态，重复相同 request_id 不会重复提交。同一进程只允许一个执行任务；取消后查询状态再提交下一个。幂等账本不跨进程持久化，重启不会自动恢复物理任务。
 
-原 Vela 的 `vela-agent` 命令和 `wam_*` MCP 工具继续保留，作为旧协议兼容入口；其执行循环与任务管理已复用本包。新项目优先使用 `vela-agent-kit` 与 `agent_*`。
+本项目统一使用 `agenticwam` 命令、`agenticwam` Python 包与 `agent_*` MCP 工具。Vela-Franka 是机器人执行后端的名称；旧版本的升级步骤见[迁移说明](docs/migration.md)。
 
 ## 扩展与验证
 
@@ -92,7 +97,7 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
-目录可独立复制成仓库，包含构建配置、CI、测试、示例、许可及贡献说明。`.github/workflows/ci.yml` 在独立仓库中运行；父仓库另有集成 CI。
+本仓库包含构建配置、测试、示例、许可及贡献说明。`.github/workflows/ci.yml` 在 GitHub Actions 中检查安装、测试、打包和离线运行。
 
 ## 参考与许可
 

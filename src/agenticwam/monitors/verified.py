@@ -1,6 +1,6 @@
 """Combine configurable evidence gates with a replaceable goal verifier."""
 
-from vela_agent.core.types import ContractError, integer
+from agenticwam.core.types import ContractError, integer
 
 
 class RequiredSignal:

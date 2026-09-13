@@ -8,9 +8,9 @@ import uuid
 from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
-from vela_agent.backends.legacy_wire import WamContext
-from vela_agent.backends.vela_signals import completion_settings
-from vela_agent.core.types import ContractError as ContractViolation
+from agenticwam.backends.legacy_wire import WamContext
+from agenticwam.backends.vela_signals import completion_settings
+from agenticwam.core.types import ContractError as ContractViolation
 
 
 class VelaContextBackend:

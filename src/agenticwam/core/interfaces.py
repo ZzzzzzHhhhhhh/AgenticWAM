@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Event
 from typing import Protocol
 
-from vela_agent.core.types import Context, Plan, Request, Step
+from agenticwam.core.types import Context, Plan, Request, Step
 
 
 class StructuredModel(Protocol):

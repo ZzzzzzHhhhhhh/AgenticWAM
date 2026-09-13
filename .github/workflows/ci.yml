@@ -1,4 +1,4 @@
-name: Agent framework
+name: AgenticWAM
 on: [push, pull_request]
 jobs:
   test:
@@ -16,4 +16,11 @@ jobs:
       - run: python -m ruff format --check .
       - run: python -m pytest -q
       - run: python -m build
-      - run: vela-agent-kit demo --scenario mixed
+      - name: Check installed wheel outside checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/agenticwam-smoke"
+          "$RUNNER_TEMP/agenticwam-smoke/bin/python" -m pip install --no-deps dist/agenticwam-*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/agenticwam-smoke/bin/agenticwam" --help
+          "$RUNNER_TEMP/agenticwam-smoke/bin/agenticwam" demo --scenario mixed
+          "$RUNNER_TEMP/agenticwam-smoke/bin/agenticwam" demo --scenario plates

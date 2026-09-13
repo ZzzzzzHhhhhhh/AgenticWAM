@@ -114,14 +114,14 @@ class Plan:
             raise ContractError("duplicate step identifiers")
 
     def to_dict(self):
-        return json.loads(json.dumps({"schema": "vela.agent.plan/v1", **asdict(self)}))
+        return json.loads(json.dumps({"schema": "agenticwam.plan/v1", **asdict(self)}))
 
     @classmethod
     def from_dict(cls, value):
         if (
             not isinstance(value, dict)
             or set(value) != {"schema", "plan_id", "request_id", "steps", "summary", "planner", "mission"}
-            or value["schema"] != "vela.agent.plan/v1"
+            or value["schema"] not in ("agenticwam.plan/v1", "vela.agent.plan/v1")
         ):
             raise ContractError("invalid plan envelope")
         if not isinstance(value["steps"], list):
@@ -147,7 +147,7 @@ class Context:
         text(self.text, "context text")
 
     def to_dict(self):
-        return {"schema": "vela.agent.context/v1", **asdict(self)}
+        return {"schema": "agenticwam.context/v1", **asdict(self)}
 
     @property
     def fingerprint(self):

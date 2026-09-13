@@ -9,7 +9,7 @@ def summarize(directory):
     events = [json.loads(line) for line in (directory / "events.jsonl").read_text(encoding="utf-8").splitlines()]
     counts = Counter(row["event"] for row in events)
     return {
-        "schema": "vela.agent.metrics/v1",
+        "schema": "agenticwam.metrics/v1",
         "execution_status": result["status"],
         "completed_steps": len(result["completed_steps"]),
         "attempted_steps": counts["step_started"],

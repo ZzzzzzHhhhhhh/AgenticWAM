@@ -2,7 +2,7 @@
 
 from importlib.metadata import entry_points
 
-from vela_agent.core.types import ContractError
+from agenticwam.core.types import ContractError
 
 KINDS = {"backends", "planners", "monitors", "compilers"}
 
@@ -11,7 +11,7 @@ def discover(kind):
     if kind not in KINDS:
         raise ContractError("unknown plugin kind")
     found = {}
-    for entry in entry_points(group=f"vela_agent.{kind}"):
+    for entry in entry_points(group=f"agenticwam.{kind}"):
         if entry.name in found:
             raise ContractError(f"duplicate {kind} plugin: {entry.name}")
         found[entry.name] = entry

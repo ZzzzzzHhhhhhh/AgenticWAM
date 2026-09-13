@@ -11,7 +11,7 @@ from contextlib import suppress
 from copy import deepcopy
 from pathlib import Path
 
-from vela_agent.core.types import ContractError, Plan, RunSettings
+from agenticwam.core.types import ContractError, Plan, RunSettings
 
 
 class TaskBlocked(RuntimeError):
@@ -60,7 +60,7 @@ class Runner:
         with self._lock:
             self._event_sequence += 1
             event = {
-                "schema": "vela.agent.event/v1",
+                "schema": "agenticwam.event/v1",
                 "sequence": self._event_sequence,
                 "plan_id": self._state.get("plan_id"),
                 "event": kind,
