@@ -1,0 +1,54 @@
+{
+  "capability": {
+    "name": "OpenWAM plate to rack, inside to outside",
+    "input_modalities": [
+      "text"
+    ],
+    "atomic_skill": "Pick up exactly one named-color plate and place it onto the next available rack slot, filling slots from innermost to outermost.",
+    "training_language": "English",
+    "example_instruction": "Place the blue plate onto the rack, filling the next available slot from innermost to outermost.",
+    "constraints": [
+      "Preserve the user's color order, including repeated colors. Never silently rename a color.",
+      "One atomic task is one complete plate placement, including releasing the plate.",
+      "All steps retain the learned innermost-to-outermost placement order.",
+      "Arbitrary numbered slots, left-to-right placement and out-of-order slot access are unsupported in this profile.",
+      "If the requested object is absent or visually ambiguous, execution must stop for clarification.",
+      "Color selection and single-plate prompts require validation with the deployed checkpoint; this profile is not a claim of model accuracy."
+    ],
+    "skills": [
+      "language"
+    ]
+  },
+  "camera_roles": [
+    "front_view",
+    "wrist_view"
+  ],
+  "max_steps": 64,
+  "step_timeout_sec": 300,
+  "chunks_per_check": 1,
+  "max_chunks_per_step": 40,
+  "visual_watchdog_chunks": 5,
+  "completion": {
+    "type": "gripper_release",
+    "closed_fraction": 0.4,
+    "open_fraction": 0.8,
+    "closed_stable_ms": 100,
+    "open_stable_ms": 250,
+    "max_feedback_age_ms": 500
+  },
+  "verification": {
+    "preconditions": [
+      "The named target plate is visibly available.",
+      "The rack has a plausible next free inside-out slot."
+    ],
+    "invariants": [
+      "Preserve the identities and positions of already placed plates."
+    ],
+    "handoff_criteria": [
+      "The named plate is released and remains stable in the intended rack slot.",
+      "The arm has withdrawn enough to start the next placement without disturbing the plate."
+    ]
+  },
+  "backend": "vela-openwam",
+  "max_replans": 0
+}

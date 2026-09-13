@@ -1,0 +1,7 @@
+Vela Agent
+Copyright 2026 Vela Agent contributors
+
+This distribution contains the original task-orchestration implementation.
+RPent and Pi are architectural references; their source code is not included.
+The license of this distribution does not extend to external robot services,
+model weights, datasets, or the parent workspace.
