@@ -1,1 +1,1 @@
-"""Extension components for Vela Agent."""
+"""Extension components for AgenticWAM."""

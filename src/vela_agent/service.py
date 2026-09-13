@@ -87,7 +87,7 @@ def build_server(planner, jobs, profile):
         from mcp.server.fastmcp import FastMCP
     except ImportError as exc:
         raise RuntimeError("Install velabot-agent[mcp] to use the MCP interface") from exc
-    server = FastMCP("Vela Agent")
+    server = FastMCP("AgenticWAM")
 
     @server.tool()
     def agent_capabilities() -> dict:

@@ -12,7 +12,7 @@ from vela_agent.core.types import Plan, Request
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Vela Agent: 任务无关的动作模型编排框架")
+    parser = argparse.ArgumentParser(description="AgenticWAM: 任务无关的动作模型编排框架")
     commands = parser.add_subparsers(dest="command", required=True)
     demo = commands.add_parser("demo", help="离线运行固定证据示例, 不使用模型或机器人")
     demo.add_argument("--scenario", choices=("mixed", "plates"), default="mixed")

@@ -1,4 +1,4 @@
-"""Vela Agent: standalone, task-independent policy orchestration."""
+"""AgenticWAM: standalone, task-independent policy orchestration."""
 
 from vela_agent.core.types import Context, Plan, Request, Step
 
