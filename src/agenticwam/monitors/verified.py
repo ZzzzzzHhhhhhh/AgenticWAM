@@ -34,10 +34,46 @@ class VerifiedMonitor:
     Repeated confirmations are a stability heuristic, not calibrated probability.
     """
 
-    def __init__(self, verifier, *, gate=None, watchdog_units=5):
+    def __init__(self, verifier, *, gate=None, watchdog_units=5, batch_verification=False):
         integer(watchdog_units, "watchdog_units", 1, 256)
+        if type(batch_verification) is not bool:
+            raise ContractError("batch_verification must be boolean")
         self.verifier, self.gate, self.watchdog_units = verifier, gate, watchdog_units
+        self.batch_verification = batch_verification
         self._last_check = 0
+
+    def reset(self):
+        self._last_check = 0
+        if callable(getattr(self.verifier, "reset", None)):
+            self.verifier.reset()
+
+    def set_context(self, plan, completed, remaining):
+        if callable(getattr(self.verifier, "set_context", None)):
+            self.verifier.set_context(plan, completed, remaining)
+
+    @property
+    def configuration(self):
+        return {
+            "watchdog_units": self.watchdog_units,
+            "batch_verification": self.batch_verification,
+            "required_signal": getattr(self.gate, "name", None),
+            "verifier": getattr(self.verifier, "configuration", {}),
+        }
+
+    @property
+    def last_call_metrics(self):
+        return getattr(self.verifier, "last_call_metrics", None)
+
+    def window_size(self, result, confirmations):
+        candidate = self.gate is None or self.gate.candidate(result)
+        if (
+            self.batch_verification
+            and candidate
+            and result.get("handoff_ready") is True
+            and callable(getattr(self.verifier, "verify_many", None))
+        ):
+            return confirmations
+        return 1
 
     def begin(self, step, observation, *, cancel=None):
         self._last_check = 0
@@ -51,7 +87,16 @@ class VerifiedMonitor:
         return False
 
     def evaluate(self, step, before, after, result, *, cancel=None):
-        verdict = validate_verdict(self.verifier.verify(step, before, after, cancel=cancel))
+        return self._gate_verdict(self.verifier.verify(step, before, after, cancel=cancel), result)
+
+    def evaluate_window(self, step, before, observations, result, *, cancel=None):
+        values = self.verifier.verify_many(step, before, observations, cancel=cancel)
+        if not isinstance(values, list) or len(values) != len(observations):
+            raise ContractError("verifier must return one verdict per observation")
+        return [self._gate_verdict(value, result) for value in values]
+
+    def _gate_verdict(self, value, result):
+        verdict = validate_verdict(value)
         if verdict["verdict"] == "succeeded" and self.gate is not None and not self.gate.candidate(result):
             return {
                 "verdict": "unknown",

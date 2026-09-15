@@ -32,6 +32,15 @@
 
 默认两次不同时间的证据确认后切换。这是工程稳定性策略，不是统计独立验证或已校准的置信度。证据不确定时停止；明确受阻时才允许调用可选重规划器。
 
+可选 `WindowMonitor` 扩展提供 `window_size(result, confirmations)` 和 `evaluate_window(...)`。
+后者必须为每组观测按顺序返回一个 verdict。Runner 仍采集满足原时间间隔和新鲜度要求的证据；窗口内不执行动作。旧插件没有这些方法时继续逐次验证。
+`VerifiedMonitor(batch_verification=True)` 仅在事件候选、后端允许交接且 verifier 支持 `verify_many` 时合并。
+后续帧 blocked/unknown 不能被前帧 continue 掩盖；先成功后不成功也不会切换。
+
+Monitor 还可选实现 `reset()` 和 `set_context(plan, completed, remaining)`：前者在每次 run 开始时调用，后者在每次步骤尝试前调用。completed 是执行器的完成账本，不是独立物理真值。内置视觉检查器利用这两个钩子维护有界执行记忆，并在每次 preflight 清空上一尝试的判断。
+
+适配器可以在观测的顶层 `diagnostics` 返回取图计时；该字段不会进入视觉 prompt。模型适配器可提供 `last_call_metrics`，由 Monitor 透传给计时日志。Codex 实现使用线程局部存储，避免并发规划与判断混用指标。
+
 ## 有限重规划
 
 `Replanner.revise(plan, completed, failed, evidence, cancel=...)` 返回剩余计划。

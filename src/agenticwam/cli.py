@@ -27,6 +27,7 @@ def main(argv=None):
         command.add_argument("--output", type=Path, default=Path("agent-runs"))
         command.add_argument("--model", default="gpt-6-astra")
         command.add_argument("--codex", default="codex")
+        command.add_argument("--compact-instructions", action="store_true", help="实验性精简 Codex 基础说明")
         if name in {"run", "mcp"}:
             command.add_argument("--endpoint")
         if name == "run":
@@ -49,7 +50,7 @@ def main(argv=None):
             from agenticwam.planners.codex import CodexJson
 
             profile = load_profile(args.profile)
-            model = CodexJson(executable=args.codex, model=args.model)
+            model = CodexJson(executable=args.codex, model=args.model, compact_instructions=args.compact_instructions)
             planner = make_planner(profile, model)
             if args.command == "mcp":
                 from agenticwam.service import serve

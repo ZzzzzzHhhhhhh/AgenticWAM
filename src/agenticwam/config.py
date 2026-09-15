@@ -29,6 +29,9 @@ def load_profile(path):
         if not isinstance(ruleset, list) or any(not isinstance(rule, str) or not rule.strip() for rule in ruleset):
             raise ContractError("verification rules must be arrays of nonempty strings")
     run_settings(value)
+    for option in ("batch_verification", "verification_memory"):
+        if option in value and type(value[option]) is not bool:
+            raise ContractError(f"{option} must be boolean")
     return value
 
 
@@ -76,9 +79,12 @@ def assemble(profile, model, output, *, endpoint=None, on_event=None):
         compiler = plugins.load("compilers", profile["compiler"], config=profile.get("compiler_config", {}))
     planner = make_planner(profile, model)
     monitor = VerifiedMonitor(
-        VisionVerifier(model, profile.get("verification")),
+        VisionVerifier(
+            model, profile.get("verification"), memory_entries=3 if profile.get("verification_memory", True) else 0
+        ),
         gate=RequiredSignal(signal_name) if signal_name else None,
         watchdog_units=profile.get("visual_watchdog_chunks", 5),
+        batch_verification=profile.get("batch_verification", False),
     )
     if profile.get("monitor"):
         monitor = plugins.load("monitors", profile["monitor"], model=model, profile=profile)

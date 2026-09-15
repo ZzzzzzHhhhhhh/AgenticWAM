@@ -41,6 +41,16 @@ class Monitor(Protocol):
     def evaluate(self, step: Step, before: dict, after: dict, result: dict, *, cancel: Event | None = None) -> dict: ...
 
 
+class WindowMonitor(Monitor, Protocol):
+    """Optional batching extension; old Monitor plugins use sequential checks."""
+
+    def window_size(self, result: dict, confirmations: int) -> int: ...
+
+    def evaluate_window(
+        self, step: Step, before: dict, observations: list[dict], result: dict, *, cancel: Event | None = None
+    ) -> list[dict]: ...
+
+
 class Replanner(Protocol):
     def revise(
         self, plan: Plan, completed: tuple[Step, ...], failed: Step, evidence: dict, *, cancel: Event | None = None

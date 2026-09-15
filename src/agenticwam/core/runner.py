@@ -81,8 +81,33 @@ class Runner:
         if deadline is not None and time.monotonic() >= deadline:
             raise TimeoutError("task deadline exceeded")
 
+    def _call(self, run_dir, phase, function, *args, **kwargs):
+        started = time.monotonic()
+        succeeded, diagnostics = False, {}
+        try:
+            value = function(*args, **kwargs)
+            succeeded = True
+            if isinstance(value, dict):
+                diagnostics = value.get("diagnostics", {})
+            return value
+        finally:
+            elapsed = time.monotonic() - started
+            component_metrics = getattr(getattr(function, "__self__", None), "last_call_metrics", None)
+            self._event(
+                run_dir,
+                "phase_timing",
+                step_id=self.snapshot().get("current_step"),
+                phase=phase,
+                elapsed_seconds=elapsed,
+                succeeded=succeeded,
+                diagnostics=diagnostics,
+                model_metrics=component_metrics,
+            )
+
     def _observe(self, run_dir, after_ns=0):
-        observation = self.backend.observe(run_dir, after_ns=after_ns, cancel=self.cancel_event)
+        observation = self._call(
+            run_dir, "observe", self.backend.observe, run_dir, after_ns=after_ns, cancel=self.cancel_event
+        )
         stamp = observation.get("metadata", {}).get("server_monotonic_ns")
         if type(stamp) is not int or stamp <= after_ns:
             raise ContractError("backend returned stale observation evidence")
@@ -98,7 +123,8 @@ class Runner:
         # Reject unsupported contexts before preflight or any action.
         context = self.compiler.compile(step, f"{plan.plan_id}:{step.step_id}", revision)
         before = self._observe(run_dir)
-        precondition = self.monitor.begin(step, before, cancel=self.cancel_event)
+        self._check(deadline)
+        precondition = self._call(run_dir, "preflight", self.monitor.begin, step, before, cancel=self.cancel_event)
         self._check(deadline)
         self._event(
             run_dir, "precondition_checked", step_id=step.step_id, verdict=precondition, observation=before["metadata"]
@@ -114,8 +140,15 @@ class Runner:
             if units + batch > self.settings.max_units_per_step:
                 raise TimeoutError(f"{step.step_id}: chunk budget exhausted without verified success")
             self._active_operation = uuid.uuid4().hex
-            result = self.backend.execute(
-                self._active_operation, context, batch, min(deadline - time.monotonic(), 600), cancel=self.cancel_event
+            result = self._call(
+                run_dir,
+                "execute",
+                self.backend.execute,
+                self._active_operation,
+                context,
+                batch,
+                min(deadline - time.monotonic(), 600),
+                cancel=self.cancel_event,
             )
             if result.get("state") != "completed":
                 raise RuntimeError(result.get("reason", "action batch failed"))
@@ -135,7 +168,53 @@ class Runner:
             if not self.monitor.should_check(result, units):
                 continue
             after = self._observe(run_dir, result["finished_monotonic_ns"])
-            verdict = self.monitor.evaluate(step, before, after, result, cancel=self.cancel_event)
+            # Optional temporal-window verification keeps legacy monitor plugins unchanged.
+            window_size = getattr(self.monitor, "window_size", lambda _r, _n: 1)(result, self.settings.confirmations)
+            if type(window_size) is not int or not 1 <= window_size <= self.settings.confirmations:
+                raise ContractError("monitor returned an invalid verification window size")
+            observations = [after]
+            for _ in range(window_size - 1):
+                self._check(deadline)
+                observations.append(
+                    self._observe(
+                        run_dir,
+                        observations[-1]["metadata"]["server_monotonic_ns"] + self.settings.confirmation_interval_ns,
+                    )
+                )
+            if window_size > 1:
+                self._check(deadline)
+                verdicts = self._call(
+                    run_dir,
+                    "verify_window",
+                    self.monitor.evaluate_window,
+                    step,
+                    before,
+                    observations,
+                    result,
+                    cancel=self.cancel_event,
+                )
+                if not isinstance(verdicts, list) or len(verdicts) != window_size:
+                    raise ContractError("monitor must return one verdict per observation")
+                for index, (observation, item) in enumerate(zip(observations, verdicts, strict=True)):
+                    self._event(
+                        run_dir,
+                        "window_verdict",
+                        step_id=step.step_id,
+                        index=index,
+                        verdict=item,
+                        observation=observation["metadata"],
+                    )
+                # A later obstacle or ambiguous frame cannot be hidden by an earlier 'continue'.
+                selected = next(
+                    (i for i, v in enumerate(verdicts) if v.get("verdict") not in {"succeeded", "continue"}), 0
+                )
+                after, verdict = observations[selected], verdicts[selected]
+            else:
+                self._check(deadline)
+                verdict = self._call(
+                    run_dir, "verify", self.monitor.evaluate, step, before, after, result, cancel=self.cancel_event
+                )
+                verdicts = [verdict]
             self._check(deadline)
             self._event(
                 run_dir,
@@ -158,11 +237,24 @@ class Runner:
             # Goal verification never authorizes switching during an unfinished action batch.
             if result.get("handoff_ready", False) is not True:
                 raise RuntimeError("goal achieved but backend is not ready for handoff")
-            for _ in range(self.settings.confirmations - 1):
-                after = self._observe(
-                    run_dir, after["metadata"]["server_monotonic_ns"] + self.settings.confirmation_interval_ns
-                )
-                confirmation = self.monitor.evaluate(step, before, after, result, cancel=self.cancel_event)
+            for index in range(1, self.settings.confirmations):
+                if index < window_size:
+                    after, confirmation = observations[index], verdicts[index]
+                else:
+                    after = self._observe(
+                        run_dir, after["metadata"]["server_monotonic_ns"] + self.settings.confirmation_interval_ns
+                    )
+                    self._check(deadline)
+                    confirmation = self._call(
+                        run_dir,
+                        "verify",
+                        self.monitor.evaluate,
+                        step,
+                        before,
+                        after,
+                        result,
+                        cancel=self.cancel_event,
+                    )
                 self._check(deadline)
                 self._event(
                     run_dir,
@@ -190,17 +282,20 @@ class Runner:
                 json.dumps(plan.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
             )
             self._check()
+            if callable(getattr(self.monitor, "reset", None)):
+                self.monitor.reset()
             self._event(
                 run_dir,
                 "run_started",
                 settings=vars(self.settings),
+                monitor_configuration=getattr(self.monitor, "configuration", {}),
                 components={
                     "backend": type(self.backend).__name__,
                     "monitor": type(self.monitor).__name__,
                     "compiler": type(self.compiler).__name__,
                 },
             )
-            self.backend.check_capabilities()
+            self._call(run_dir, "capabilities", self.backend.check_capabilities)
             pending, completed = deque(plan.steps), []
             revision, attempts = 0, 0
             while pending:
@@ -210,6 +305,8 @@ class Runner:
                 if attempts > 64:
                     raise RuntimeError("run step budget exhausted")
                 try:
+                    if callable(getattr(self.monitor, "set_context", None)):
+                        self.monitor.set_context(plan, tuple(completed), (step, *pending))
                     self._step(plan, step, revision, run_dir)
                 except TaskBlocked as exc:
                     self._check()
@@ -217,8 +314,15 @@ class Runner:
                     if self.replanner is None or count >= self.settings.max_replans:
                         raise
                     self._event(run_dir, "replan_requested", step_id=step.step_id, evidence=exc.evidence)
-                    revised = self.replanner.revise(
-                        plan, tuple(completed), step, exc.evidence, cancel=self.cancel_event
+                    revised = self._call(
+                        run_dir,
+                        "replan",
+                        self.replanner.revise,
+                        plan,
+                        tuple(completed),
+                        step,
+                        exc.evidence,
+                        cancel=self.cancel_event,
                     )
                     self._check()
                     revised = Plan.from_dict(revised.to_dict())

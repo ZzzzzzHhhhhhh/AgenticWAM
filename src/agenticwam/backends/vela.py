@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
@@ -136,7 +137,8 @@ class VelaContextBackend:
         return self._intent("agent.cancel", {"operation_id": operation_id})
 
     def observe(self, directory, *, after_ns=0, cancel=None):
-        deadline = time.monotonic() + self.http_timeout_sec
+        started = time.monotonic()
+        deadline = started + self.http_timeout_sec
         while True:
             snapshot = self.snapshot()
             self._check_cancelled(snapshot, cancel)
@@ -154,10 +156,26 @@ class VelaContextBackend:
                 raise TimeoutError("required cameras did not provide fresh post-action evidence")
             time.sleep(0.05)
         observation_id = uuid.uuid4().hex
+        snapshot_seconds = time.monotonic() - started
+        transfer_started = time.monotonic()
+
+        def download(role):
+            if cancel is not None and cancel.is_set():
+                raise InterruptedError("sequence cancelled")
+            requested = time.monotonic()
+            data = self._request("/api/v1/previews/" + quote(role, safe=""), image=True)
+            return data, {"role": role, "bytes": len(data), "elapsed_seconds": time.monotonic() - requested}
+
+        # Camera reads are independent; map preserves the declared image/camera order.
+        with ThreadPoolExecutor(max_workers=min(4, len(self.camera_roles))) as pool:
+            previews = list(pool.map(download, self.camera_roles))
+        transfer_seconds = time.monotonic() - transfer_started
+        if cancel is not None and cancel.is_set():
+            raise InterruptedError("sequence cancelled")
         images = []
-        for index, role in enumerate(self.camera_roles):
+        for index, (data, _) in enumerate(previews):
             path = directory / f"{observation_id}-{index}.jpg"
-            path.write_bytes(self._request("/api/v1/previews/" + quote(role, safe=""), image=True))
+            path.write_bytes(data)
             images.append(str(path))
         metadata = {
             "observation_id": observation_id,
@@ -166,4 +184,13 @@ class VelaContextBackend:
             "camera_frames": [streams[r] for r in self.camera_roles],
             "hardware": snapshot.get("hardware", {}),
         }
-        return {"images": images, "metadata": metadata}
+        return {
+            "images": images,
+            "metadata": metadata,
+            "diagnostics": {
+                "snapshot_wait_seconds": snapshot_seconds,
+                "preview_transfer_seconds": transfer_seconds,
+                "image_bytes": sum(len(data) for data, _ in previews),
+                "previews": [metrics for _, metrics in previews],
+            },
+        }

@@ -2,7 +2,7 @@
 
 面向动作模型的任务编排框架：理解人的目标，生成模型可执行的短条件，依据执行证据决定继续、切换或调整剩余计划。
 
-**状态：0.3.0 工程预览。** 核心与任务、机器人、模型供应商分离；当前提供 Codex、Vela/OpenWAM 和离线证据回放适配。尚未通过真机泛化实验，也不宣称已形成新的研究方法。
+**状态：0.4.0 工程预览。** 核心与任务、机器人、模型供应商分离；当前提供 Codex、Vela/OpenWAM 和离线证据回放适配。尚未通过真机泛化实验，也不宣称已形成新的研究方法。
 
 ## 五分钟离线体验
 
@@ -86,6 +86,7 @@ MCP 工具：`agent_capabilities`、`agent_plan`、`agent_execute`、`agent_stat
 
 ## 扩展与验证
 
+- [执行记忆与延迟优化](docs/latency.md)：有界上下文、合并确认、分段计时与只读对照实验。
 - [接口和插件开发](docs/extensions.md)：Backend、Planner、Compiler、Monitor 契约与安装式插件。
 - [评估与局限](docs/evaluation.md)：如何区分工程验证与真实泛化结果。
 - [迁移说明](docs/migration.md)：v1 部署链路与 v2 独立框架之间的关系。
